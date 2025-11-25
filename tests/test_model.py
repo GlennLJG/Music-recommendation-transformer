@@ -16,11 +16,12 @@ class Config:
     d_model = 8
     n_heads = 2
     mask_values = [0.0,0.1]
-@pytest.fixture
+
+@pytest.fixture(scope="module")
 def config():
     return Config
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def batch_fixture(config):
     
     # Create a batch of random audio features
@@ -34,7 +35,7 @@ def batch_fixture(config):
     skip_intensity_batch[0,0] = 1
     return audio_features, skip_intensity_batch, padding_mask
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def config_fixture(config):
     config_data = {
         'model': {
@@ -60,10 +61,10 @@ def config_fixture(config):
     return str(config_file)
     
 def test_print_fixture(config,batch_fixture):
-    print("config :")  # affiche les variables de config
-    for attr in dir(config):
+    print("config :")
+    for attr, value in vars(config).items():
         if not attr.startswith("__"):
-            print(f"{attr}: {getattr(config, attr)}")
+            print(f"{attr}: {value}")
     audio_features, skip_intensity_batch, padding_mask = batch_fixture
     print("\nAudio features : ", audio_features.shape,"\n" ,audio_features)
     print("\nSkip intensity batch : ", skip_intensity_batch.shape, "\n", skip_intensity_batch)
@@ -75,8 +76,9 @@ def test_input_embeddings(config,batch_fixture):
     embeddings_layer = model.InputEmbeddings(config.d_model, config.audio_feature_nb)
     embeddings = embeddings_layer(audio_features)
 
-    assert embeddings.shape == (config.batch_size, config.seq_len, config.d_model)
     print("\nInput embeddings example : ",embeddings.shape, "\n",embeddings)
+    assert embeddings.shape == (config.batch_size, config.seq_len, config.d_model)
+    
 
 def test_positional_encoding(config,batch_fixture):
     audio_features, skip_intensity_batch, padding_mask = batch_fixture
@@ -87,8 +89,9 @@ def test_positional_encoding(config,batch_fixture):
     pos_encoding_layer = model.PositionalEncoding(config.d_model, dropout=0.1, seq_max_len=config.seq_len)
     pos_encoded_embeddings = pos_encoding_layer(embeddings)
 
-    assert pos_encoded_embeddings.shape == (config.batch_size, config.seq_len, config.d_model)
     print("\nPositional encoding example : ",pos_encoded_embeddings.shape,"\n", pos_encoded_embeddings)
+    assert pos_encoded_embeddings.shape == (config.batch_size, config.seq_len, config.d_model)
+    
 
 def test_attention_mask(config,config_fixture, batch_fixture):
     _,skip_intensity_batch, padding_mask = batch_fixture
@@ -96,8 +99,9 @@ def test_attention_mask(config,config_fixture, batch_fixture):
     encoder = model.MusicRecoEncoder(config_fixture)
     attn_mask = encoder.attention_mask(skip_intensity_batch, padding_mask)
 
-    assert attn_mask.shape == (config.n_heads * config.batch_size, config.seq_len, config.seq_len)
     print("\nAttention mask example : ",attn_mask.shape,"\n", attn_mask)
+    assert attn_mask.shape == (config.n_heads * config.batch_size, config.seq_len, config.seq_len)
+    
 
 def test_encoder_forward(config,config_fixture, batch_fixture):
     audio_features, skip_intensity_batch, padding_mask = batch_fixture
@@ -106,5 +110,6 @@ def test_encoder_forward(config,config_fixture, batch_fixture):
     encoder = model.MusicRecoEncoder(config_fixture)
     output = encoder(batch)
 
-    assert output.shape == (config.batch_size, config.seq_len, config.audio_feature_nb)
     print("\nEncoder output example : ",output.shape,"\n", output)
+    assert output.shape == (config.batch_size, config.seq_len, config.audio_feature_nb)
+    
